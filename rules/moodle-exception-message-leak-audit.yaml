@@ -1,0 +1,94 @@
+rules:
+  - id: moodle-exception-message-leak-audit
+    patterns:
+      - pattern-either:
+          # Direct variant: getMessage() concatenated into header/echo/die/print.
+          - pattern: header($A . $E->getMessage())
+          - pattern: header($A . $E->getMessage() . $B)
+          - pattern: header($E->getMessage())
+          - pattern: header($E->getMessage() . $B)
+          - pattern: echo $A . $E->getMessage();
+          - pattern: echo $E->getMessage() . $B;
+          - pattern: echo $E->getMessage();
+          - pattern: echo $A . $E->getMessage() . $B;
+          - pattern: print $A . $E->getMessage();
+          - pattern: print $E->getMessage() . $B;
+          - pattern: print $E->getMessage();
+          - pattern: die($E->getMessage());
+          - pattern: die($A . $E->getMessage());
+          - pattern: die($A . $E->getMessage() . $B);
+          # Indirect variant: assignment inside catch, then used outside.
+          - pattern: |
+              try {
+                ...
+              } catch (Exception $E) {
+                ...
+                $M = $A . $E->getMessage();
+                ...
+              }
+          - pattern: |
+              try {
+                ...
+              } catch (Exception $E) {
+                ...
+                $M = $A . $E->getMessage() . $B;
+                ...
+              }
+          - pattern: |
+              try {
+                ...
+              } catch (Exception $E) {
+                ...
+                $M = $E->getMessage();
+                ...
+              }
+          - pattern: |
+              try {
+                ...
+              } catch (Exception $E) {
+                ...
+                $M = $E->getMessage() . $B;
+                ...
+              }
+    message: >-
+      Caught exception message is written to an outbound sink
+      (header/echo/print/die) directly or via an intermediate assignment
+      inside the catch block. Moodle exception messages frequently
+      contain class names, file paths, decode errors, or database
+      failures that fingerprint the server. Replace the direct exposure
+      with a generic string and keep the detail in debugging() /
+      $debuginfo (server-side only). The indirect assignment variant
+      catches cases where getMessage() is stored in a variable inside
+      the catch block and later passed to header() or similar output
+      functions outside it.
+    paths:
+      include:
+        - '**/*.php'
+      exclude:
+        - '**/vendor/**'
+        - '**/node_modules/**'
+        - '**/tests/**'
+        - '**/*_test.php'
+        - '**/behat/**'
+        - '**/phpunit/**'
+    languages:
+      - php
+    severity: WARNING
+    metadata:
+      category: security
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: LOW
+      subcategory:
+        - audit
+      technology:
+        - Moodle Plugins
+      vulnerability_class:
+        - Information Exposure
+      references:
+        - https://moodledev.io/general/development/policies/codingstyle
+        - https://cwe.mitre.org/data/definitions/209.html
+      owasp:
+        - A05:2021 - Security Misconfiguration
+      cwe:
+        - "CWE-209: Generation of Error Message Containing Sensitive Information"

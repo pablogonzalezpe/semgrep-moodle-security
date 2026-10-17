@@ -1,0 +1,63 @@
+rules:
+  - id: moodle-db-mutation-audit
+    patterns:
+      - pattern-either:
+          - pattern: $DB->update_record(...)
+          - pattern: $DB->delete_records(...)
+          - pattern: $DB->delete_records_select(...)
+          - pattern: $DB->insert_record(...)
+          - pattern: $DB->insert_records(...)
+          - pattern: $DB->set_field(...)
+          - pattern: $DB->set_field_select(...)
+          - pattern: $DB->execute(...)
+      - pattern-not-inside: |
+          if (confirm_sesskey()) { ... }
+      - pattern-not-inside: |
+          function $F(...) { ... confirm_sesskey(); ... }
+      - pattern-not-inside: |
+          function $F(...) { ... require_sesskey(); ... }
+    message: >-
+      Direct database mutation via the Moodle DML API. This is a
+      state-changing operation; confirm that the request path validating
+      it is CSRF-protected with confirm_sesskey() and authorised with
+      require_capability() on the relevant context. Omitting the sesskey
+      check is the Moodle equivalent of a missing CSRF token. This rule
+      surfaces every direct mutation for review and only excludes
+      mutations already enclosed by an if (confirm_sesskey()) branch or a
+      function that itself calls confirm_sesskey()/require_sesskey();
+      top-level procedural sesskey guards are not detected, so the
+      reviewer still confirms protection on those.
+    paths:
+      include:
+        - '**/*.php'
+      exclude:
+        - '**/vendor/**'
+        - '**/node_modules/**'
+        - '**/tests/**'
+        - '**/*_test.php'
+        - '**/behat/**'
+        - '**/phpunit/**'
+        - '**/cli/**'
+        - '**/db/upgrade.php'
+        - '**/db/install.php'
+    languages:
+      - php
+    severity: INFO
+    metadata:
+      category: security
+      confidence: LOW
+      likelihood: LOW
+      impact: MEDIUM
+      subcategory:
+        - audit
+      technology:
+        - Moodle Plugins
+      vulnerability_class:
+        - Cross-Site Request Forgery (CSRF)
+      references:
+        - https://moodledev.io/general/development/policies/security
+        - https://moodledev.io/docs/apis/core/dml
+      owasp:
+        - A01:2021 - Broken Access Control
+      cwe:
+        - "CWE-352: Cross-Site Request Forgery (CSRF)"

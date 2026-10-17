@@ -1,0 +1,23 @@
+# Semgrep
+.semgrep/
+.semgrep_log/
+semgrep.sarif
+semgrep.json
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editors
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.sublime-*
+
+# Python (if running semgrep locally)
+__pycache__/
+*.pyc
+.venv/

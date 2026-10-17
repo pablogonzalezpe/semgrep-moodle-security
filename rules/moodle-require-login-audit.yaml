@@ -1,0 +1,52 @@
+rules:
+  - id: moodle-require-login-audit
+    patterns:
+      - pattern-either:
+          - pattern: require_login($COURSE, ...);
+          - pattern: require_login($COURSE);
+          - pattern: require_login();
+          - pattern: require_course_login($COURSE, ...);
+    message: >-
+      require_login (or require_course_login) authenticates the caller and
+      optionally checks enrolment on the destination course, but does not
+      enforce any capability. This rule surfaces every such call-site; it
+      does not verify whether a require_capability() follows, because the
+      presence of a capability check elsewhere in the file cannot be
+      matched without masking genuinely unprotected call-sites. Confirm
+      manually that require_capability() is enforced on every context the
+      script acts on — particularly on any id or context taken from
+      request input other than the one passed to require_login(). The gap
+      between require_login and require_capability is a frequent source of
+      access-control bypasses in Moodle contrib plugins and in some core
+      modules.
+    paths:
+      include:
+        - '**/*.php'
+      exclude:
+        - '**/vendor/**'
+        - '**/node_modules/**'
+        - '**/tests/**'
+        - '**/*_test.php'
+        - '**/behat/**'
+        - '**/phpunit/**'
+    languages:
+      - php
+    severity: INFO
+    metadata:
+      category: security
+      confidence: LOW
+      likelihood: LOW
+      impact: MEDIUM
+      subcategory:
+        - audit
+      technology:
+        - Moodle Plugins
+      vulnerability_class:
+        - Improper Authorization
+      references:
+        - https://moodledev.io/general/development/policies/security
+        - https://moodledev.io/docs/apis/subsystems/access
+      owasp:
+        - A01:2021 - Broken Access Control
+      cwe:
+        - "CWE-862: Missing Authorization"

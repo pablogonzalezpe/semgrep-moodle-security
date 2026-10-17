@@ -1,0 +1,54 @@
+rules:
+  - id: moodle-sql-injection-get-records-sql-audit
+    patterns:
+      - pattern-either:
+          - pattern: $DB->get_records_sql($SQL, ...)
+          - pattern: $DB->get_record_sql($SQL, ...)
+          - pattern: $DB->get_fieldset_sql($SQL, ...)
+          - pattern: $DB->count_records_sql($SQL, ...)
+          - pattern: $DB->get_records_sql($SQL)
+          - pattern: $DB->get_record_sql($SQL)
+          - pattern: $DB->get_fieldset_sql($SQL)
+          - pattern: $DB->count_records_sql($SQL)
+      - metavariable-regex:
+          metavariable: $SQL
+          regex: ^"[^"]*(\$[A-Za-z_]|\$\{[^}]+\}|\{\$)
+    message: >-
+      $DB->get_records_sql (or sibling SQL method) first argument is a
+      double-quoted string with PHP interpolation. Moodle's DML API
+      requires placeholders + a $params array for user-influenced
+      values. If the interpolated variable can be reached by request
+      input, this is a SQL-injection sink. If the variable is a
+      hard-coded fragment (table prefix, column name) the pattern is
+      still fragile and should be refactored.
+    paths:
+      include:
+        - '**/*.php'
+      exclude:
+        - '**/vendor/**'
+        - '**/node_modules/**'
+        - '**/tests/**'
+        - '**/*_test.php'
+        - '**/behat/**'
+        - '**/phpunit/**'
+    languages:
+      - php
+    severity: WARNING
+    metadata:
+      category: security
+      confidence: LOW
+      likelihood: MEDIUM
+      impact: HIGH
+      subcategory:
+        - audit
+      technology:
+        - Moodle Plugins
+      vulnerability_class:
+        - SQL Injection
+      references:
+        - https://moodledev.io/docs/apis/core/dml
+        - https://moodledev.io/general/development/policies/security
+      owasp:
+        - A03:2021 - Injection
+      cwe:
+        - "CWE-89: Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')"
